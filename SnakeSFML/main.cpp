@@ -13,41 +13,148 @@ void InitTimer();
 void SetupWindow();
 void InitSprites();
 void InitGameField();
+void DrawSprite(sf::Sprite& sprite, int col, int row);
 void Draw();
 void DrawGameField();
 void Update(int dt);
 void MoveSnake();
 
-const int WINDOW_SIZE_IN_TILES = 15;
-const int WINDOW_HEIGHT        = 960;
-const int WINDOW_WIDTH         = 960;
-const int FRAMERATE_LIMIT      = 60;
-const int TILE_SIZE            = 64;
-const int SNAKE_MOVE_TIME      = 300;
+const int SNAKE_MOVE_TIME = 500;
+const int TILE_SIZE = 64;
 
-const char SNAKE = 's';
-const char TREE  = '#';
-const char GRASS = ' ';
+// Horizontal amount of tiles
+const int GAME_FIELD_SIZE_H = 15;
+// Vertical amount of tiles
+const int GAME_FIELD_SIZE_V = 15;
 
 // Array with tile codes
-char gameField[WINDOW_SIZE_IN_TILES][WINDOW_SIZE_IN_TILES];
-
-int snakeHeadCol = 8;
-int snakeHeadRow = 4;
-
+char gameField[GAME_FIELD_SIZE_H][GAME_FIELD_SIZE_V];
 
 int snakeMoveTimer = SNAKE_MOVE_TIME;
 
-sf::RenderWindow window(sf::VideoMode(WINDOW_HEIGHT, WINDOW_WIDTH), "Snake");
+sf::RenderWindow window(sf::VideoMode(GAME_FIELD_SIZE_H * TILE_SIZE, GAME_FIELD_SIZE_V * TILE_SIZE), "Snake");
 sf::Sprite treeSprite;
 sf::Sprite grassSprite;
 sf::Sprite snakeSprite;
 
 sf::Texture textureTerrain;
 
+enum EDirection {
+	Left,
+	Right,
+	Down,
+	Up
+};
+
+struct SnakeSegment
+{
+	// TODO: Add constructor with "row, col, direction" arguments that set corresponding class members. Default value for direction should be EDirection::Left
+	SnakeSegment(int row, int col, EDirection direction = Left) : row(row), col(col), direction(direction) {}
+	
+	void Draw()
+	{
+		DrawSprite(snakeSprite, col, row);
+	};
+
+	void Move()
+	{
+		int deltaCol = -1;
+		int deltaRow = 0;
+
+		switch (direction)
+		{
+		case Down:
+		{
+			deltaCol = 0;
+			deltaRow = 1;
+			break;
+		}
+		case Up:
+		{
+			deltaCol = 0;
+			deltaRow = -1;
+			break;
+		}
+		case Left:
+		{
+			deltaCol = -1;
+			deltaRow = 0;
+			break;
+		}
+		case Right:
+		{
+			deltaCol = 1;
+			deltaRow = 0;
+			break;
+		}
+		}
+
+		col += deltaCol;
+		row += deltaRow;
+	}
+
+	EDirection direction;
+
+	int col;
+	int row;
+};
+
+struct Snake {
+	SnakeSegment segments[4] = {
+		{4, 5, Down},
+		{4, 6},
+		{4, 7},
+		{4, 8},
+	};
+
+	// Get the first snake segment as head
+	SnakeSegment* head = segments;
+	int size = 4;
+
+	void Draw()
+	{
+		for (SnakeSegment& snakeSeg : segments)
+		{
+			snakeSeg.Draw();
+		}
+	}
+
+	// TODO: Implement snake movement
+	void Move() {
+
+		for (int i = size - 1; i > 0; --i) {
+			segments[i].col = segments[i - 1].col;
+			segments[i].row = segments[i - 1].row;
+		}
+		switch (head->direction)
+		{
+		case Down:
+		{
+			head->row++; 
+			break;
+		}
+		case Up:
+		{
+			head->row--;
+			break;
+		}
+		case Left:
+		{
+			head->col--;
+			break;
+		}
+		case Right:
+		{
+			head->col++;
+			break;
+		}
+		}
+	}
+} snake;
+
 void SetupWindow()
 {
-	window.setFramerateLimit(FRAMERATE_LIMIT);
+	window.setFramerateLimit(60);
 }
 
 void InitSprites()
@@ -65,7 +172,7 @@ void InitSprites()
 	grassSprite.setTextureRect(sf::IntRect(0, TILE_SIZE, TILE_SIZE, TILE_SIZE));
 
 	snakeSprite.setTexture(textureTerrain);
-	snakeSprite.setTextureRect(sf::IntRect(TILE_SIZE * 2, TILE_SIZE * 2, TILE_SIZE, TILE_SIZE));
+	snakeSprite.setTextureRect(sf::IntRect(2 * TILE_SIZE, 2 * TILE_SIZE, TILE_SIZE, TILE_SIZE));
 }
 
 void InitGameField()
@@ -75,23 +182,23 @@ void InitGameField()
 	// 's' char means snake
 	// ' ' empty tile, draws it as grass
 
-	for (int row = 0; row < WINDOW_SIZE_IN_TILES; row++)
+	for (int row = 0; row < GAME_FIELD_SIZE_V; row++)
 	{
-		for (int col = 0; col < WINDOW_SIZE_IN_TILES; col++)
+		for (int col = 0; col < GAME_FIELD_SIZE_H; col++)
 		{
-			if ((row == 0 || row == (WINDOW_SIZE_IN_TILES - 1)) || (col == 0 || col == (WINDOW_SIZE_IN_TILES - 1)))
-				gameField[row][col] = TREE;
+			if (col == 0 || col == GAME_FIELD_SIZE_H - 1
+				|| row == 0 || row == GAME_FIELD_SIZE_V - 1)
+			{
+				gameField[row][col] = '#';
+			}
 			else
 			{
-				gameField[row][col] = GRASS;
+
+			// ' ' empty tile, draws it as grass
+			gameField[row][col] = ' ';
 			}
 		}
 	}
-
-	gameField[4][5] = SNAKE;
-	gameField[4][6] = SNAKE;
-	gameField[4][7] = SNAKE;
-	gameField[4][8] = SNAKE;
 }
 
 void Init()
@@ -128,6 +235,23 @@ int main()
 			// "close requested" event: we close the window
 			if (event.type == sf::Event::Closed)
 				window.close();
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+			{
+				snake.head->direction = EDirection::Down;
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+			{
+				snake.head->direction = EDirection::Up;
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+			{
+				snake.head->direction = EDirection::Left;
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+			{
+				snake.head->direction = EDirection::Right;
+			}
 		}
 
 		Update(elapsedTime.count());
@@ -154,41 +278,41 @@ void Update(int dt)
 void MoveSnake()
 {
 	// Crash to the tree
-	if (gameField[snakeHeadRow][snakeHeadCol + 1] == TREE)
+	if (gameField[snake.head->row][snake.head->col - 1] == '#')
 	{
 		cout << "You loose!" << endl;
 		exit(1);
 	}
 
-	gameField[snakeHeadRow][snakeHeadCol - 3] = GRASS;
-	snakeHeadCol++;
-	gameField[snakeHeadRow][snakeHeadCol] = SNAKE;
+	snake.Move();
 }
 
 void Draw()
 {
 	DrawGameField();
+
+	snake.Draw();
 }
 
 void DrawGameField()
 {
-	for (int row = 0; row < WINDOW_SIZE_IN_TILES; row++)
+	for (int row = 0; row < 15; row++)
 	{
-		for (int col = 0; col < WINDOW_SIZE_IN_TILES; col++)
+		for (int col = 0; col < 15; col++)
 		{
 			char tile = gameField[row][col];
 
-			if (tile == GRASS)
+			if (tile == ' ')
 			{
 				grassSprite.setPosition(col * TILE_SIZE, row * TILE_SIZE);
 				window.draw(grassSprite);
 			}
-			else if (tile == TREE)
+			else if (tile == '#')
 			{
 				treeSprite.setPosition(col * TILE_SIZE, row * TILE_SIZE);
 				window.draw(treeSprite);
 			}
-			else if (tile == SNAKE)
+			else if (tile == 's')
 			{
 				grassSprite.setPosition(col * TILE_SIZE, row * TILE_SIZE);
 				window.draw(grassSprite);
@@ -198,4 +322,10 @@ void DrawGameField()
 			}
 		}
 	}
+}
+
+void DrawSprite(sf::Sprite& sprite, int col, int row)
+{
+	sprite.setPosition(col * TILE_SIZE, row * TILE_SIZE);
+	window.draw(sprite);
 }
