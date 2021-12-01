@@ -93,6 +93,19 @@ struct SnakeSegment
 		row += deltaRow;
 	}
 
+	// copy assignment
+	SnakeSegment& operator=(const SnakeSegment& other)
+	{
+		// Guard self assignment
+		if (this == &other)
+			return *this;
+
+		col = other.col;
+		row = other.row;
+
+		return *this;
+	}
+
 	EDirection direction;
 
 	int col;
@@ -123,8 +136,7 @@ struct Snake {
 	void Move() {
 
 		for (int i = size - 1; i > 0; --i) {
-			segments[i].col = segments[i - 1].col;
-			segments[i].row = segments[i - 1].row;
+			segments[i] = segments[i - 1];
 		}
 		switch (head->direction)
 		{
